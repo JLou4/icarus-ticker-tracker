@@ -1,0 +1,16 @@
+# Icarus Ticker Tracker - Cloudflare Workers Config
+name = "icarus-ticker-tracker"
+compatibility_date = "2024-01-01"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "icarus-ticker-tracker-db"
+database_id = "" # Will be filled after creating the database
+
+# Environment variables (secrets set via wrangler secret)
+# ICARUS_API_KEY - for authenticated endpoints
+# FINNHUB_API_KEY - for news API
+
+[vars]
+ENVIRONMENT = "production"
