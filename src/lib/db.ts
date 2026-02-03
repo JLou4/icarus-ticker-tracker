@@ -5,9 +5,15 @@ import { Ticker, PricePoint } from './types';
 
 // Get database connection
 function getDb() {
-  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  // Neon/Vercel uses various env var names
+  const connectionString = 
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.NEON_DATABASE_URL;
+    
   if (!connectionString) {
-    throw new Error('DATABASE_URL or POSTGRES_URL environment variable is not set');
+    throw new Error('No Postgres connection string found. Set POSTGRES_URL or DATABASE_URL.');
   }
   return neon(connectionString);
 }
