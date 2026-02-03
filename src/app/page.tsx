@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import MultiTickerChart from '@/components/MultiTickerChart';
 
 interface Ticker {
   id: number;
@@ -17,6 +18,12 @@ interface Ticker {
 interface Sector {
   sector: string;
   count: number;
+}
+
+interface ChartTickerData {
+  symbol: string;
+  mentionDate: string;
+  priceHistory: { date: string; close: number }[];
 }
 
 type TimeRange = '1M' | '3M' | '6M' | '1Y' | 'YTD' | 'ALL' | 'SINCE_MENTION';
@@ -44,11 +51,19 @@ function getTickerColor(index: number): string {
 export default function Home() {
   const [tickers, setTickers] = useState<Ticker[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
+  const [chartTickers, setChartTickers] = useState<ChartTickerData[]>([]);
+  const [benchmarkHistory, setBenchmarkHistory] = useState<{ date: string; close: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
   const [visibleTickers, setVisibleTickers] = useState<Set<string>>(new Set());
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Create color map for tickers
+  const tickerColors = new Map<string, string>();
+  tickers.forEach((t, i) => {
+    tickerColors.set(t.symbol, COLORS[i % COLORS.length]);
+  });
 
   useEffect(() => {
     fetchData();
@@ -56,13 +71,15 @@ export default function Home() {
 
   async function fetchData() {
     try {
-      const [tickersRes, sectorsRes] = await Promise.all([
+      const [tickersRes, sectorsRes, chartRes] = await Promise.all([
         fetch('/api/tickers'),
         fetch('/api/sectors'),
+        fetch('/api/chart-data'),
       ]);
 
       const tickersData = await tickersRes.json();
       const sectorsData = await sectorsRes.json();
+      const chartData = await chartRes.json();
 
       if (tickersData.success) {
         setTickers(tickersData.data);
@@ -71,6 +88,11 @@ export default function Home() {
 
       if (sectorsData.success) {
         setSectors(sectorsData.data);
+      }
+      
+      if (chartData.success) {
+        setChartTickers(chartData.data.tickers);
+        setBenchmarkHistory(chartData.data.benchmark);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -198,16 +220,15 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Chart Placeholder */}
-          <div className="chart-container mb-6 flex items-center justify-center">
-            <div className="text-center text-[var(--muted)]">
-              <p className="mb-2">📈 Chart Component</p>
-              <p className="text-sm">TradingView Lightweight Charts will render here</p>
-              <p className="text-sm mt-2">
-                Showing: {Array.from(visibleTickers).join(', ') || 'None'} 
-                <span className="ml-2">(+ SPY benchmark)</span>
-              </p>
-            </div>
+          {/* Multi-Ticker Chart */}
+          <div className="mb-6">
+            <MultiTickerChart
+              tickers={chartTickers}
+              benchmark={benchmarkHistory}
+              visibleTickers={visibleTickers}
+              timeRange={timeRange}
+              colors={tickerColors}
+            />
           </div>
 
           {/* Ticker Visibility Toggles */}
