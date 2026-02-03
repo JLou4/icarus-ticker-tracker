@@ -1,6 +1,8 @@
 // GET /api/tickers - List all tracked tickers
 // POST /api/tickers - Add a new ticker (requires auth)
 
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import * as db from '@/lib/db';
 import { getStockInfo, getInitialHistoricalData, getCurrentPrice } from '@/lib/yahoo-finance';

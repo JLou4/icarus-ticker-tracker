@@ -1,5 +1,7 @@
 // GET /api/sectors - List all sectors with ticker counts
 
+export const runtime = 'edge';
+
 import { NextResponse } from 'next/server';
 import * as db from '@/lib/db';
 

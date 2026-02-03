@@ -1,7 +1,10 @@
 'use client';
 
+export const runtime = 'edge';
+
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
+import PriceChart from '@/components/PriceChart';
 
 interface TickerDetail {
   symbol: string;
@@ -15,6 +18,7 @@ interface TickerDetail {
   change_since_mention: number | null;
   change_since_mention_percent: number | null;
   price_history: { date: string; close: number }[];
+  benchmark_history: { date: string; close: number }[];
 }
 
 interface NewsItem {
@@ -198,15 +202,14 @@ export default function TickerDetailPage({ params }: { params: Promise<{ symbol:
         </div>
       </div>
 
-      {/* Chart Placeholder */}
-      <div className="chart-container mb-8 flex items-center justify-center">
-        <div className="text-center text-[var(--muted)]">
-          <p className="mb-2">📈 Individual Chart</p>
-          <p className="text-sm">{ticker.symbol} vs SPY (indexed to 100)</p>
-          <p className="text-sm mt-2">
-            {ticker.price_history?.length || 0} data points loaded
-          </p>
-        </div>
+      {/* Price Chart */}
+      <div className="mb-8">
+        <PriceChart
+          symbol={ticker.symbol}
+          priceHistory={ticker.price_history || []}
+          benchmarkHistory={ticker.benchmark_history || []}
+          mentionDate={ticker.mention_date}
+        />
       </div>
 
       {/* News Section */}

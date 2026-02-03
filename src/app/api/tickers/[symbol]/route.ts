@@ -1,6 +1,8 @@
 // GET /api/tickers/:symbol - Get ticker details with price history
 // DELETE /api/tickers/:symbol - Archive a ticker (requires auth)
 
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import * as db from '@/lib/db';
 import { getCurrentPrice } from '@/lib/yahoo-finance';
