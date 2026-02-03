@@ -117,8 +117,8 @@ export default function PriceChart({
               borderRadius: '8px',
             }}
             labelStyle={{ color: 'var(--foreground)' }}
-            formatter={(value: number, name: string) => [
-              `${value.toFixed(2)}`,
+            formatter={(value, name) => [
+              typeof value === 'number' ? value.toFixed(2) : '—',
               name
             ]}
             labelFormatter={(date) => new Date(date).toLocaleDateString('en-US', {
