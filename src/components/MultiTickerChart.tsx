@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Legend,
+  ReferenceDot,
 } from 'recharts';
 
 interface PricePoint {
@@ -52,19 +53,15 @@ function getStartDate(timeRange: TimeRange, tickers: TickerData[]): string {
     case 'YTD':
       return `${now.getFullYear()}-01-01`;
     case 'ALL':
-      // Find earliest mention date
-      const earliest = tickers.reduce((min, t) => 
+    case 'SINCE_MENTION':
+      // Find earliest mention date among visible tickers
+      const visibleTickerData = tickers.filter(t => true); // all for calculation
+      if (visibleTickerData.length === 0) return now.toISOString().split('T')[0];
+      const earliest = visibleTickerData.reduce((min, t) => 
         t.mentionDate < min ? t.mentionDate : min, 
-        tickers[0]?.mentionDate || now.toISOString().split('T')[0]
+        visibleTickerData[0].mentionDate
       );
       return earliest;
-    case 'SINCE_MENTION':
-      // Each ticker uses its own mention date (handled specially)
-      const earliestMention = tickers.reduce((min, t) => 
-        t.mentionDate < min ? t.mentionDate : min, 
-        tickers[0]?.mentionDate || now.toISOString().split('T')[0]
-      );
-      return earliestMention;
     default:
       return now.toISOString().split('T')[0];
   }
@@ -77,8 +74,10 @@ export default function MultiTickerChart({
   timeRange,
   colors,
 }: MultiTickerChartProps) {
-  const chartData = useMemo(() => {
-    if (!tickers.length) return [];
+  const isSinceMention = timeRange === 'SINCE_MENTION';
+  
+  const { chartData, mentionMarkers } = useMemo(() => {
+    if (!tickers.length) return { chartData: [], mentionMarkers: [] };
 
     const startDate = getStartDate(timeRange, tickers);
     
@@ -99,20 +98,33 @@ export default function MultiTickerChart({
       .forEach(p => allDates.add(p.date));
     
     const sortedDates = Array.from(allDates).sort();
-    if (sortedDates.length === 0) return [];
+    if (sortedDates.length === 0) return { chartData: [], mentionMarkers: [] };
     
-    // Create price maps for each ticker
+    // For SINCE_MENTION mode, each ticker uses its own mention date as baseline
+    // For other modes, all tickers use the same start date
     const tickerMaps = new Map<string, Map<string, number>>();
     const baselinePrices = new Map<string, number>();
+    const markers: { symbol: string; date: string; value: number; color: string }[] = [];
     
     tickers.forEach(t => {
       if (visibleTickers.has(t.symbol)) {
         const priceMap = new Map(t.priceHistory.map(p => [p.date, p.close]));
         tickerMaps.set(t.symbol, priceMap);
         
-        // Find baseline price (first price on or after start date)
-        const baseline = t.priceHistory.find(p => p.date >= startDate)?.close;
+        // Baseline: use mention date for SINCE_MENTION, otherwise start date
+        const baselineDate = isSinceMention ? t.mentionDate : startDate;
+        const baseline = t.priceHistory.find(p => p.date >= baselineDate)?.close;
         if (baseline) baselinePrices.set(t.symbol, baseline);
+        
+        // Track mention date markers for SINCE_MENTION mode
+        if (isSinceMention && t.mentionDate >= startDate) {
+          markers.push({
+            symbol: t.symbol,
+            date: t.mentionDate,
+            value: 100, // Always 100 at mention date
+            color: colors.get(t.symbol) || 'var(--primary)',
+          });
+        }
       }
     });
     
@@ -121,7 +133,7 @@ export default function MultiTickerChart({
     const benchmarkBaseline = benchmark.find(p => p.date >= startDate)?.close;
     
     // Build chart data
-    return sortedDates.map(date => {
+    const data = sortedDates.map(date => {
       const point: Record<string, string | number | null> = { date };
       
       // Add each visible ticker (indexed to 100)
@@ -141,7 +153,9 @@ export default function MultiTickerChart({
       
       return point;
     });
-  }, [tickers, benchmark, visibleTickers, timeRange]);
+    
+    return { chartData: data, mentionMarkers: markers };
+  }, [tickers, benchmark, visibleTickers, timeRange, colors, isSinceMention]);
 
   if (chartData.length === 0) {
     return (
@@ -166,7 +180,7 @@ export default function MultiTickerChart({
       if (start && end) {
         perfs.push({
           symbol,
-          perf: end - 100,
+          perf: end - start,
           color: colors.get(symbol) || 'var(--primary)',
         });
       }
@@ -178,7 +192,7 @@ export default function MultiTickerChart({
     if (spyStart && spyEnd) {
       perfs.push({
         symbol: 'SPY',
-        perf: spyEnd - 100,
+        perf: spyEnd - spyStart,
         color: 'var(--muted)',
       });
     }
@@ -202,31 +216,33 @@ export default function MultiTickerChart({
       </div>
       
       <ResponsiveContainer width="100%" height={350}>
-        <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+        <LineChart data={chartData} margin={{ top: 5, right: 30, left: 5, bottom: 5 }}>
           <XAxis
             dataKey="date"
-            tick={{ fill: 'var(--muted)', fontSize: 12 }}
+            tick={{ fill: 'var(--muted)', fontSize: 11 }}
             tickFormatter={(date) => {
               const d = new Date(date);
               return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             }}
             interval="preserveStartEnd"
-            minTickGap={50}
+            minTickGap={60}
           />
           <YAxis
-            tick={{ fill: 'var(--muted)', fontSize: 12 }}
-            domain={['dataMin - 5', 'dataMax + 5']}
-            tickFormatter={(val) => `${val}`}
+            tick={{ fill: 'var(--muted)', fontSize: 11 }}
+            domain={['auto', 'auto']}
+            tickFormatter={(val) => `${val.toFixed(0)}`}
+            width={45}
           />
           <Tooltip
             contentStyle={{
               backgroundColor: 'var(--card)',
               border: '1px solid var(--card-border)',
               borderRadius: '8px',
+              fontSize: '13px',
             }}
-            labelStyle={{ color: 'var(--foreground)' }}
+            labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
             formatter={(value, name) => [
-              typeof value === 'number' ? value.toFixed(2) : '—',
+              typeof value === 'number' ? `${value.toFixed(1)}` : '—',
               name
             ]}
             labelFormatter={(date) => new Date(date).toLocaleDateString('en-US', {
@@ -236,8 +252,10 @@ export default function MultiTickerChart({
               year: 'numeric'
             })}
           />
-          <Legend />
-          <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="3 3" />
+          <Legend 
+            wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
+          />
+          <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="3 3" strokeOpacity={0.5} />
           
           {/* Render line for each visible ticker */}
           {Array.from(visibleTickers).map(symbol => (
@@ -248,7 +266,7 @@ export default function MultiTickerChart({
               stroke={colors.get(symbol) || 'var(--primary)'}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4 }}
+              activeDot={{ r: 4, strokeWidth: 0 }}
             />
           ))}
           
@@ -262,11 +280,27 @@ export default function MultiTickerChart({
             strokeDasharray="4 4"
             activeDot={{ r: 3 }}
           />
+          
+          {/* Mention date markers (only in SINCE_MENTION mode) */}
+          {isSinceMention && mentionMarkers.map(m => (
+            <ReferenceDot
+              key={`mention-${m.symbol}`}
+              x={m.date}
+              y={m.value}
+              r={6}
+              fill={m.color}
+              stroke="var(--background)"
+              strokeWidth={2}
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
       
       <p className="text-xs text-[var(--muted)] mt-2 text-center">
-        All tickers indexed to 100 at start of period
+        {isSinceMention 
+          ? 'Each ticker indexed to 100 at its mention date (dots show mention dates)'
+          : 'All tickers indexed to 100 at start of period'
+        }
       </p>
     </div>
   );

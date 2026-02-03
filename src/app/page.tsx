@@ -303,9 +303,9 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-sm mt-3">
                   {ticker.sector && (
-                    <span className="sector-badge">{ticker.sector}</span>
+                    <span className="sector-badge" data-sector={ticker.sector}>{ticker.sector}</span>
                   )}
                   <span className={`font-medium ${ticker.change_since_mention_percent && ticker.change_since_mention_percent >= 0 ? 'text-positive' : 'text-negative'}`}>
                     Since: {formatPercent(ticker.change_since_mention_percent)}

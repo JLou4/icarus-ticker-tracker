@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Legend,
+  ReferenceDot,
 } from 'recharts';
 
 interface PricePoint {
@@ -30,14 +31,14 @@ export default function PriceChart({
   benchmarkHistory,
   mentionDate,
 }: PriceChartProps) {
-  const chartData = useMemo(() => {
-    if (!priceHistory.length) return [];
+  const { chartData, mentionIndex, tickerPerf, spyPerf, alpha } = useMemo(() => {
+    if (!priceHistory.length) return { chartData: [], mentionIndex: null, tickerPerf: 0, spyPerf: 0, alpha: 0 };
 
     // Find the price on mention date (or closest after)
     const mentionPrice = priceHistory.find(p => p.date >= mentionDate)?.close;
     const mentionBenchmark = benchmarkHistory.find(p => p.date >= mentionDate)?.close;
 
-    if (!mentionPrice) return [];
+    if (!mentionPrice) return { chartData: [], mentionIndex: null, tickerPerf: 0, spyPerf: 0, alpha: 0 };
 
     // Filter to only show data from mention date onward
     const filteredPrices = priceHistory.filter(p => p.date >= mentionDate);
@@ -46,8 +47,11 @@ export default function PriceChart({
     // Create a map of benchmark prices by date
     const benchmarkMap = new Map(filteredBenchmark.map(p => [p.date, p.close]));
 
+    // Find the mention date index value (should be 100)
+    let mentionIndexValue = 100;
+
     // Build chart data with indexed values (100 = mention date)
-    return filteredPrices.map(point => {
+    const data = filteredPrices.map(point => {
       const indexedPrice = (point.close / mentionPrice) * 100;
       const benchClose = benchmarkMap.get(point.date);
       const indexedBenchmark = benchClose && mentionBenchmark
@@ -61,20 +65,31 @@ export default function PriceChart({
         rawPrice: point.close,
       };
     });
+
+    // Calculate performance
+    const lastData = data[data.length - 1];
+    const tickerP = lastData?.[symbol] ? (lastData[symbol] as number) - 100 : 0;
+    const spyP = lastData?.SPY ? (lastData.SPY as number) - 100 : 0;
+    
+    return { 
+      chartData: data, 
+      mentionIndex: mentionIndexValue,
+      tickerPerf: tickerP,
+      spyPerf: spyP,
+      alpha: tickerP - spyP,
+    };
   }, [priceHistory, benchmarkHistory, mentionDate, symbol]);
 
   if (chartData.length === 0) {
     return (
       <div className="chart-container flex items-center justify-center">
-        <p className="text-[var(--muted)]">No price data available</p>
+        <p className="text-[var(--muted)]">No price data available since mention date</p>
       </div>
     );
   }
 
-  const latestData = chartData[chartData.length - 1];
-  const tickerPerf = latestData?.[symbol] ? (latestData[symbol] as number) - 100 : 0;
-  const spyPerf = latestData?.SPY ? (latestData.SPY as number) - 100 : 0;
-  const alpha = tickerPerf - spyPerf;
+  // Find the data point closest to mention date for the marker
+  const mentionDataPoint = chartData.find(p => p.date >= mentionDate);
 
   return (
     <div className="chart-container">
@@ -94,31 +109,33 @@ export default function PriceChart({
       </div>
       
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+        <LineChart data={chartData} margin={{ top: 5, right: 30, left: 5, bottom: 5 }}>
           <XAxis
             dataKey="date"
-            tick={{ fill: 'var(--muted)', fontSize: 12 }}
+            tick={{ fill: 'var(--muted)', fontSize: 11 }}
             tickFormatter={(date) => {
               const d = new Date(date);
               return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             }}
             interval="preserveStartEnd"
-            minTickGap={50}
+            minTickGap={60}
           />
           <YAxis
-            tick={{ fill: 'var(--muted)', fontSize: 12 }}
-            domain={['dataMin - 5', 'dataMax + 5']}
-            tickFormatter={(val) => `${val}`}
+            tick={{ fill: 'var(--muted)', fontSize: 11 }}
+            domain={['auto', 'auto']}
+            tickFormatter={(val) => `${val.toFixed(0)}`}
+            width={45}
           />
           <Tooltip
             contentStyle={{
               backgroundColor: 'var(--card)',
               border: '1px solid var(--card-border)',
               borderRadius: '8px',
+              fontSize: '13px',
             }}
-            labelStyle={{ color: 'var(--foreground)' }}
+            labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
             formatter={(value, name) => [
-              typeof value === 'number' ? value.toFixed(2) : '—',
+              typeof value === 'number' ? `${value.toFixed(1)}` : '—',
               name
             ]}
             labelFormatter={(date) => new Date(date).toLocaleDateString('en-US', {
@@ -128,16 +145,20 @@ export default function PriceChart({
               year: 'numeric'
             })}
           />
-          <Legend />
-          <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="3 3" />
+          <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+          <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="3 3" strokeOpacity={0.5} />
+          
+          {/* Ticker line */}
           <Line
             type="monotone"
             dataKey={symbol}
             stroke="var(--primary)"
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 4 }}
+            activeDot={{ r: 4, strokeWidth: 0 }}
           />
+          
+          {/* SPY benchmark */}
           <Line
             type="monotone"
             dataKey="SPY"
@@ -147,11 +168,23 @@ export default function PriceChart({
             strokeDasharray="4 4"
             activeDot={{ r: 3 }}
           />
+          
+          {/* Mention date marker */}
+          {mentionDataPoint && (
+            <ReferenceDot
+              x={mentionDataPoint.date}
+              y={100}
+              r={8}
+              fill="var(--primary)"
+              stroke="var(--background)"
+              strokeWidth={2}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
       
       <p className="text-xs text-[var(--muted)] mt-2 text-center">
-        Indexed to 100 at mention date ({new Date(mentionDate).toLocaleDateString()})
+        Indexed to 100 at mention date ({new Date(mentionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}) — dot marks mention
       </p>
     </div>
   );

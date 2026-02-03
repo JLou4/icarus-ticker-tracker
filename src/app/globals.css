@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0f;
-  --foreground: #e4e4e7;
-  --card: #111118;
-  --card-border: rgba(255, 255, 255, 0.1);
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #18181b;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-hover: #1f1f23;
   --primary: #10b981;
   --primary-hover: #059669;
+  --primary-glow: rgba(16, 185, 129, 0.15);
   --secondary: #3b82f6;
   --danger: #ef4444;
   --muted: #71717a;
+  --muted-foreground: #a1a1aa;
 }
 
 * {
@@ -23,35 +26,38 @@ body {
   min-height: 100vh;
   background-color: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--muted);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #888;
+  background: rgba(255, 255, 255, 0.25);
 }
 
 /* Chart container */
 .chart-container {
   width: 100%;
-  height: 400px;
+  padding: 20px;
   background: var(--card);
-  border-radius: 12px;
+  border-radius: 16px;
   border: 1px solid var(--card-border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
 }
 
 /* Ticker card */
@@ -62,24 +68,29 @@ body {
   padding: 16px;
   transition: all 0.2s ease;
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: block;
 }
 
 .ticker-card:hover {
-  border-color: var(--primary);
+  border-color: rgba(16, 185, 129, 0.4);
+  background: var(--card-hover);
   transform: translateY(-2px);
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(16, 185, 129, 0.1);
 }
 
 /* Time range buttons */
 .time-range-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 500;
   background: transparent;
-  color: var(--muted);
+  color: var(--muted-foreground);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .time-range-btn:hover {
@@ -89,13 +100,13 @@ body {
 
 .time-range-btn.active {
   color: var(--primary);
-  background: rgba(16, 185, 129, 0.1);
-  border-color: var(--primary);
+  background: var(--primary-glow);
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
 /* Positive/negative colors */
 .text-positive {
-  color: #10b981;
+  color: #22c55e;
 }
 
 .text-negative {
@@ -105,12 +116,13 @@ body {
 /* Checkbox styles */
 .ticker-checkbox {
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border: 2px solid var(--muted);
-  border-radius: 4px;
+  border-radius: 5px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  position: relative;
 }
 
 .ticker-checkbox:checked {
@@ -124,17 +136,18 @@ body {
   text-align: center;
   color: white;
   font-size: 12px;
-  line-height: 12px;
+  font-weight: 600;
+  line-height: 14px;
 }
 
 /* Loading spinner */
 .spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--card-border);
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--card-border);
   border-top-color: var(--primary);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
 }
 
 @keyframes spin {
@@ -145,7 +158,7 @@ body {
 
 /* News item */
 .news-item {
-  padding: 12px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--card-border);
 }
 
@@ -156,28 +169,134 @@ body {
 .news-item a {
   color: var(--secondary);
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 .news-item a:hover {
-  text-decoration: underline;
+  color: #60a5fa;
 }
 
 /* Sector badge */
 .sector-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--secondary);
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
 }
 
-/* Mention dot on chart */
-.mention-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+/* Sector-specific badge colors */
+.sector-badge[data-sector="Information Technology"] {
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+}
+
+.sector-badge[data-sector="Energy"] {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.sector-badge[data-sector="Materials"] {
+  background: rgba(6, 182, 212, 0.12);
+  color: #06b6d4;
+}
+
+.sector-badge[data-sector="Financials"] {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.sector-badge[data-sector="Health Care"] {
+  background: rgba(236, 72, 153, 0.12);
+  color: #ec4899;
+}
+
+.sector-badge[data-sector="Industrials"] {
+  background: rgba(251, 146, 60, 0.12);
+  color: #fb923c;
+}
+
+/* Stats card styling */
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.stat-card .label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-card .value {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Header styling */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Button base */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
   background: var(--primary);
-  position: absolute;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted-foreground);
+  border-color: var(--card-border);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--foreground);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary), #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
